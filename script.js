@@ -136,7 +136,7 @@
     });
   });
 
-  /* ---- Contact form (mailto fallback, no backend) ---- */
+  /* ---- Contact form (FormSubmit.co) ---- */
   var form = document.getElementById("contactForm");
   var note = document.getElementById("formNote");
   if (form) {
@@ -157,18 +157,39 @@
         note.className = "form__note err";
         return;
       }
+      if (form._honey.value) return; // spam bot caught by honeypot
 
-      var subject = encodeURIComponent("【無料簡易診断のお申し込み】" + (company || name));
-      var body = encodeURIComponent(
-        "お名前: " + name + "\n" +
-        "会社名: " + company + "\n" +
-        "メール: " + email + "\n\n" +
-        "ご相談内容:\n" + message + "\n"
-      );
-      note.textContent = "メールソフトを起動します。送信ボタンで完了です。";
-      note.className = "form__note ok";
-      window.location.href =
-        "mailto:saito@kip-consulting.com?subject=" + subject + "&body=" + body;
+      var submitBtn = form.querySelector("button[type=submit]");
+      if (submitBtn) submitBtn.disabled = true;
+      note.textContent = "送信中...";
+      note.className = "form__note";
+
+      fetch("https://formsubmit.co/ajax/tpsplusicompany@gmail.com", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          name: name,
+          company: company,
+          email: email,
+          message: message,
+          _subject: "【TPS+i】無料簡易診断のお申し込み",
+          _template: "table"
+        })
+      })
+        .then(function (res) {
+          if (!res.ok) throw new Error("送信失敗");
+          note.textContent = "送信しました。担当者より折り返しご連絡します。";
+          note.className = "form__note ok";
+          form.reset();
+        })
+        .catch(function () {
+          note.textContent =
+            "送信に失敗しました。お手数ですが tpsplusicompany@gmail.com までご連絡ください。";
+          note.className = "form__note err";
+        })
+        .finally(function () {
+          if (submitBtn) submitBtn.disabled = false;
+        });
     });
   }
 })();
